@@ -1,15 +1,15 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   throw new Error("Missing Supabase environment configuration.");
 }
 
 type UserContext = {
-  admin: ReturnType<typeof createClient>;
-  userClient: ReturnType<typeof createClient>;
+  admin: SupabaseClient;
+  userClient: SupabaseClient;
   user: {
     id: string;
     email?: string;
@@ -17,7 +17,7 @@ type UserContext = {
   token: string;
 };
 
-export function createAdminClient() {
+export function createAdminClient(): SupabaseClient {
   return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });

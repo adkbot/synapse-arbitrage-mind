@@ -1,14 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireUserContext } from "../_shared/supabaseClient.ts";
-import type { createAdminClient } from "../_shared/supabaseClient.ts";
 import { BinanceConnector, loadBinanceCredentials } from "../_shared/binance.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type AdminClient = ReturnType<typeof createAdminClient>;
 type MarketDataRow = {
   symbol: string | null;
   bid_price: number | null;
@@ -40,7 +39,7 @@ function jsonResponse(data: unknown, status = 200): Response {
 
 class TradingEngine {
   constructor(
-    private supabase: AdminClient,
+    private supabase: SupabaseClient,
     private userId: string,
     private binance: BinanceConnector,
   ) {}
@@ -160,7 +159,7 @@ class TradingEngine {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {

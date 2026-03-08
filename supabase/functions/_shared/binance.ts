@@ -1,6 +1,4 @@
-import type { createAdminClient } from "./supabaseClient.ts";
-
-type AdminClient = ReturnType<typeof createAdminClient>;
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 type SpotBalance = { asset: string; free: number; locked: number };
 type FuturesBalance = { asset: string; balance: number };
@@ -22,7 +20,7 @@ export type Credentials = {
   testnet: boolean;
 };
 
-export async function loadBinanceCredentials(admin: AdminClient, userId: string): Promise<Credentials> {
+export async function loadBinanceCredentials(admin: SupabaseClient, userId: string): Promise<Credentials> {
   const { data, error } = await admin
     .from("api_configurations")
     .select("api_key, api_secret, testnet")
@@ -43,14 +41,14 @@ export async function loadBinanceCredentials(admin: AdminClient, userId: string)
 }
 
 export class BinanceConnector {
-  private supabase: AdminClient;
+  private supabase: SupabaseClient;
   private userId: string;
   private apiKey: string;
   private secretKey: string;
   private spotBaseUrl: string;
   private futuresBaseUrl: string;
 
-  constructor(opts: { supabase: AdminClient; userId: string; credentials: Credentials }) {
+  constructor(opts: { supabase: SupabaseClient; userId: string; credentials: Credentials }) {
     this.supabase = opts.supabase;
     this.userId = opts.userId;
     this.apiKey = opts.credentials.apiKey;
@@ -139,12 +137,12 @@ export class BinanceConnector {
     const balances = payload?.balances ?? [];
 
     return balances
-      .map((balance: { asset: string; free: string; locked: string }) => ({
-        asset: balance.asset,
-        free: Number(balance.free ?? 0),
-        locked: Number(balance.locked ?? 0),
+      .map((b: { asset: string; free: string; locked: string }) => ({
+        asset: b.asset,
+        free: Number(b.free ?? 0),
+        locked: Number(b.locked ?? 0),
       }))
-      .filter((balance) => balance.free > 0 || balance.locked > 0);
+      .filter((b: SpotBalance) => b.free > 0 || b.locked > 0);
   }
 
   async fetchFuturesBalances(): Promise<FuturesBalance[]> {
@@ -157,11 +155,11 @@ export class BinanceConnector {
     const assets = payload?.assets ?? [];
 
     return assets
-      .map((asset: { asset: string; walletBalance: string }) => ({
-        asset: asset.asset,
-        balance: Number(asset.walletBalance ?? 0),
+      .map((a: { asset: string; walletBalance: string }) => ({
+        asset: a.asset,
+        balance: Number(a.walletBalance ?? 0),
       }))
-      .filter((asset) => asset.balance > 0);
+      .filter((a: FuturesBalance) => a.balance > 0);
   }
 
   async persistBalances(): Promise<{ spot: number; futures: number }> {
