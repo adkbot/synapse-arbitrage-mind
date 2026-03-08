@@ -4,6 +4,7 @@ import type { ApiBotSnapshot } from '@/types/api';
 
 type RealTimeBalance = ApiBotSnapshot['balances'][number];
 type RealTimeTrade = ApiBotSnapshot['trades'][number];
+
 const emptySnapshot: ApiBotSnapshot = {
   balances: [],
   trades: [],
@@ -32,7 +33,7 @@ export const useRealTimeData = () => {
 
   useEffect(() => {
     let closed = false;
-    let eventSource: EventSource | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
 
     const loadInitial = async () => {
       setIsLoading(true);
@@ -52,33 +53,27 @@ export const useRealTimeData = () => {
         }
       }
 
-      if (closed) {
-        return;
+      // Poll every 10 seconds instead of SSE (edge functions don't support SSE)
+      if (!closed) {
+        pollTimer = setInterval(async () => {
+          try {
+            const data = await backendClient.getState();
+            if (!closed) {
+              setSnapshot(data);
+              setError(null);
+            }
+          } catch {
+            // silent - will retry next interval
+          }
+        }, 10000);
       }
-
-      eventSource = backendClient.createEventSource();
-      eventSource.onmessage = (event) => {
-        if (!event?.data) return;
-        try {
-          const data = JSON.parse(event.data) as ApiBotSnapshot;
-          setSnapshot(data);
-          setError(null);
-        } catch (parseError) {
-          console.error('Falha ao interpretar atualização do bot.', parseError);
-        }
-      };
-      eventSource.onerror = () => {
-        setError('Conexão em tempo real perdida. Tentando reconectar...');
-      };
     };
 
     loadInitial();
 
     return () => {
       closed = true;
-      if (eventSource) {
-        eventSource.close();
-      }
+      if (pollTimer) clearInterval(pollTimer);
     };
   }, []);
 
@@ -139,11 +134,3 @@ export const useRealTimeData = () => {
     stopBot,
   };
 };
-
-
-
-
-
-
-
-
